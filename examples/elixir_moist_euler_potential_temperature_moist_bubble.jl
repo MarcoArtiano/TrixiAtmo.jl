@@ -1,5 +1,6 @@
 using OrdinaryDiffEq
 using Trixi, TrixiAtmo
+using Plots
 using TrixiAtmo: cons2aeqpot, saturation_pressure, source_terms_moist_bubble,
                  flux_LMARS, flux_shima_etal, flux_theta
 using NLsolve: nlsolve
