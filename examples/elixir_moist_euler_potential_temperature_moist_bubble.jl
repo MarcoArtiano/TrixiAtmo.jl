@@ -1,7 +1,7 @@
 using OrdinaryDiffEq
 using Trixi, TrixiAtmo
 using TrixiAtmo: cons2aeqpot, saturation_pressure, source_terms_moist_bubble,
-                 flux_LMARS
+                 flux_LMARS, flux_shima_etal, flux_theta
 using NLsolve: nlsolve
 
 ###############################################################################
@@ -231,25 +231,25 @@ end
 
 initial_condition = initial_condition_moist
 
-boundary_condition = (x_neg = boundary_condition_slip_wall,
-                      x_pos = boundary_condition_slip_wall,
-                      y_neg = boundary_condition_slip_wall,
-                      y_pos = boundary_condition_slip_wall)
+boundary_conditions = (x_neg = boundary_condition_periodic,
+                       x_pos = boundary_condition_periodic,
+                       y_neg = boundary_condition_slip_wall,
+                       y_pos = boundary_condition_slip_wall)
 
 source_term = source_terms_moist_bubble
 
 ###############################################################################
 # Get the DG approximation space
 
-polydeg = 4
+polydeg = 3
 basis = LobattoLegendreBasis(polydeg)
 
 surface_flux = flux_LMARS
+volume_flux = flux_theta
+volume_integral = VolumeIntegralFluxDifferencing(volume_flux)
 
-#volume_integral = VolumeIntegralFluxDifferencing(volume_flux)
-
-solver = DGSEM(basis, surface_flux)
-
+solver = DGSEM(basis, surface_flux, volume_integral)
+#solver = DGSEM(basis, surface_flux)
 coordinates_min = (0.0, 0.0)
 coordinates_max = (20000.0, 10000.0)
 
@@ -257,19 +257,19 @@ cells_per_dimension = (64, 32)
 
 # Create curved mesh with 64 x 32 elements
 mesh = StructuredMesh(cells_per_dimension, coordinates_min, coordinates_max,
-                      periodicity = (false, false))
+                      periodicity = (true, false))
 
 ###############################################################################
 # create the semi discretization object
 
 semi = SemidiscretizationHyperbolic(mesh, equations, initial_condition, solver,
-                                    boundary_conditions = boundary_condition,
+                                    boundary_conditions = boundary_conditions,
                                     source_terms = source_term)
 
 ###############################################################################
 # ODE solvers, callbacks etc.
 
-tspan = (0.0, 500.0)
+tspan = (0.0, 4.0)
 ode = semidiscretize(semi, tspan)
 
 summary_callback = SummaryCallback()
